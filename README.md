@@ -1,3 +1,4 @@
+# 自用版 新增QuickSetting
 # Clash For Magisk简介
 
 本文所提到的[Clash For Magisk](https://github.com/kalasutra/Clash\_For\_Magisk)意指由[kalasutra](https://github.com/kalasutra)开发的使用shell启动[clash](https://github.com/Dreamacro/clash)内核并创建iptables tproxy规则在Android上实现透明代理的[Magisk](https://github.com/topjohnwu/Magisk)模块，以及基于它的两个衍生版本。
