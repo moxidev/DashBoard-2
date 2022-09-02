@@ -1,6 +1,9 @@
 package com.dashboard.kotlin.clashhelper
 
 import android.util.Log
+import android.widget.Toast
+import com.dashboard.kotlin.MainActivity
+import com.dashboard.kotlin.MainPage
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.*
 import java.net.HttpURLConnection
@@ -13,19 +16,19 @@ object ClashStatus {
 
     private var getStatusScope: Job? = null
 
-    enum class Status{
+    enum class Status {
         CmdRunning, Running, Stop
     }
 
-    fun getRunStatus(mainScope: Boolean = true, cb: (Status)->Unit) {
+    fun getRunStatus(mainScope: Boolean = true, cb: (Status) -> Unit) {
         GlobalScope.launch(Dispatchers.IO) {
-            val status =  when {
+            val status = when {
                 isCmdRunning -> Status.CmdRunning
                 clashRunning -> Status.Running
                 else -> Status.Stop
             }
             if (mainScope)
-                withContext(Dispatchers.Main){
+                withContext(Dispatchers.Main) {
                     cb(status)
                 }
             else
@@ -33,7 +36,7 @@ object ClashStatus {
         }
     }
 
-    private val clashRunning: Boolean
+    public val clashRunning: Boolean
         get() =
             runCatching {
                 val conn =
@@ -43,14 +46,14 @@ object ClashStatus {
                 conn.inputStream.bufferedReader()
                     .readText().contains("{\"hello\":\"clash")
             }.onFailure {
-                Log.e("TAG", "clashRunning: $it", )
+                Log.e("TAG", "clashRunning: $it")
             }.getOrDefault(false)
 
 
     private val isGetStatusRunning
-        get() = getStatusScope?.isActive?:false
+        get() = getStatusScope?.isActive ?: false
 
-    fun startGetStatus(cb: (String)->Unit) {
+    fun startGetStatus(cb: (String) -> Unit) {
         if (isGetStatusRunning) return
         getStatusScope = GlobalScope.launch(Dispatchers.IO) {
             val secret = ClashConfig.secret
@@ -69,9 +72,9 @@ object ClashStatus {
                         var cpuTotal = 0L
                         var clashCpuTotal = 0L
                         Shell.cmd("cat /proc/stat | grep \"cpu \"").exec().out.first()
-                            .replace("\n","")
-                            .replace("cpu ","")
-                            .split(Regex(" +")).forEach{ str ->
+                            .replace("\n", "")
+                            .replace("cpu ", "")
+                            .split(Regex(" +")).forEach { str ->
                                 runCatching {
                                     cpuTotal += str.toLong()
                                 }
@@ -79,7 +82,7 @@ object ClashStatus {
                         Shell.cmd("cat /proc/`cat ${ClashConfig.pidPath}`/stat").exec().out.first()
                             .split(Regex(" +"))
                             .filterIndexed { index, _ -> index in 13..16 }
-                            .forEach{ str ->
+                            .forEach { str ->
                                 runCatching {
                                     clashCpuTotal += str.toLong()
                                 }
@@ -87,7 +90,7 @@ object ClashStatus {
                         val cpuAVG = BigDecimal(
                             runCatching {
                                 ((clashCpuTotal - lastClashCpuTotal) /
-                                        (cpuTotal - lastCpuTotal).toDouble() *100)
+                                        (cpuTotal - lastCpuTotal).toDouble() * 100)
                             }.getOrDefault(0) as Double
                         ).setScale(2, RoundingMode.HALF_UP)
 
@@ -99,7 +102,7 @@ object ClashStatus {
                         ).exec().out.first()
                         val result = it.bufferedReader().readLine()
                             .replace("}", ",\"RES\":\"$res\",\"CPU\":\"$cpuAVG%\"}")
-                        withContext(Dispatchers.Main){
+                        withContext(Dispatchers.Main) {
                             cb(result)
                         }
 
@@ -120,28 +123,53 @@ object ClashStatus {
     var isCmdRunning = false
         private set
 
-    fun start(){
+    fun start() {
         if (isCmdRunning) return
         isCmdRunning = true
         Shell.cmd(
             "${ClashConfig.scriptsPath}/clash.service -s && ${ClashConfig.scriptsPath}/clash.iptables -s"
-        ).submit{
+        ).submit {
             isCmdRunning = false
         }
     }
 
-    fun stop(){
+    fun stop() {
         if (isCmdRunning) return
         isCmdRunning = true
         Shell.cmd(
             "${ClashConfig.scriptsPath}/clash.service -k",
             "${ClashConfig.scriptsPath}/clash.iptables -k"
-        ).submit{
+        ).submit {
             isCmdRunning = false
         }
     }
 
-    fun switch(){
+    fun stopWithBack(cb: () -> Unit) {
+        if (isCmdRunning) return
+        isCmdRunning = true
+        Shell.cmd(
+            "${ClashConfig.scriptsPath}/clash.service -k",
+            "${ClashConfig.scriptsPath}/clash.iptables -k"
+        ).submit {
+            isCmdRunning = false
+            cb()
+        }
+    }
+
+    fun startWithBack(cb: (Boolean) -> Unit) {
+        if (isCmdRunning) return
+        isCmdRunning = true
+        Shell.cmd(
+            "${ClashConfig.scriptsPath}/clash.service -s && ${ClashConfig.scriptsPath}/clash.iptables -s"
+        ).submit {
+            isCmdRunning = false
+            cb(true)
+            return@submit
+        }
+        cb(false)
+    }
+
+    fun switch() {
         getRunStatus(false) {
             if (it == Status.Running)
                 stop()
@@ -150,10 +178,10 @@ object ClashStatus {
         }
     }
 
-    fun updateGeox(){
+    fun updateGeox() {
         if (isCmdRunning) return
         isCmdRunning = true
-        Shell.cmd("${ClashConfig.scriptsPath}/clash.tool -u").submit{
+        Shell.cmd("${ClashConfig.scriptsPath}/clash.tool -u").submit {
             isCmdRunning = false
         }
     }

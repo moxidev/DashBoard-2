@@ -18,7 +18,11 @@ lateinit var GExternalCacheDir: String
 lateinit var KV: MMKV
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+       var isInitialized = false
+    }
     init {
+        isInitialized = true
         Shell.setDefaultBuilder(
             Shell.Builder.create()
                 .setInitializers(BusyBoxInstaller::class.java)
