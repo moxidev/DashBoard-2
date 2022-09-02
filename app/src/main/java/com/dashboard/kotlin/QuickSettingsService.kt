@@ -12,7 +12,7 @@ class QuickSettingsService : TileService() {
     private var toggleState = STATE_ON
     override fun onClick() {
         ClashStatus.switch().run {
-            updateTile()
+            updateTile(true)
         }
     }
 
@@ -24,7 +24,7 @@ class QuickSettingsService : TileService() {
         updateTile()
     }
 
-    private fun updateTile() {
+    private fun updateTile(isToast: Boolean = false) {
         ClashStatus.getRunStatus {
             if (it == ClashStatus.Status.Running || it == ClashStatus.Status.CmdRunning) {
                 // ON
@@ -32,14 +32,14 @@ class QuickSettingsService : TileService() {
                 qsTile.state = Tile.STATE_ACTIVE
                 qsTile.updateTile()
                 qsTile.label = applicationContext.getString(R.string.tile_label_running)
-                Toast.makeText(this, "Clash已关闭", Toast.LENGTH_SHORT).show()
+                if (isToast) Toast.makeText(this, "Clash已关闭", Toast.LENGTH_SHORT).show()
             } else {
                 // OFF
                 toggleState = STATE_OFF
                 qsTile.state = Tile.STATE_INACTIVE
                 qsTile.label = applicationContext.getString(R.string.tile_label_run)
                 qsTile.updateTile()
-                Toast.makeText(this, "Clash已开启", Toast.LENGTH_SHORT).show()
+                if (isToast) Toast.makeText(this, "Clash已开启", Toast.LENGTH_SHORT).show()
             }
         }
     }
